@@ -1,7 +1,5 @@
 package controllers
 
-import logging._
-
 import javax.inject._
 import play.api._
 import play.api.mvc._
@@ -13,7 +11,7 @@ import play.api.mvc._
 @Singleton
 class HomeController @Inject()(val controllerComponents: ControllerComponents) extends BaseController {
 
-  private val logger = LoggerFactory.getLogger
+  private val logger = logging.LoggerFactory.getLogger
 
   /**
    * Create an Action to render an HTML page.
