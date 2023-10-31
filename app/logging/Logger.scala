@@ -12,8 +12,12 @@ import sourcecode._
 
 trait Logger[FB] extends LoggerSupport[FB, Logger] with DefaultMethodsSupport[FB] {
 
+  // TRACE and DEBUG logger methods take source code info
+
   def trace: DiagnosticLoggerMethod[FB]
+
   def debug: DiagnosticLoggerMethod[FB]
+
   def info: LoggerMethod[FB]
   def warn: LoggerMethod[FB]
   def error: LoggerMethod[FB]
@@ -175,34 +179,45 @@ trait DiagnosticLoggerMethod[FB] extends EnabledLoggerMethod {
 
 object Logger {
 
-  def apply[FB](core: CoreLogger, fieldBuilder: FB): Logger[FB] = new Impl[FB](core, fieldBuilder)
+  def apply[FB](core: CoreLogger, fieldBuilder: FB, sourceInfoMethod: (FB, Line, Enclosing, Args) => FieldBuilderResult): Logger[FB] = {
+    new Impl[FB](core, fieldBuilder, sourceInfoMethod)
+  }
 
   /**
    */
-  class Impl[FB](val core: CoreLogger, val fieldBuilder: FB) extends Logger[FB] {
+  class Impl[FB](val core: CoreLogger, val fieldBuilder: FB, sourceInfoMethod: (FB, Line, Enclosing, Args) => FieldBuilderResult) extends Logger[FB] {
 
     abstract class LoggerMethodBase(level: Level) extends EnabledLoggerMethod {
       override def enabled: Boolean = core.isEnabled(level)
 
       override def enabled(condition: Condition): Boolean = core.isEnabled(level, condition.asJava)
-
     }
 
     class DefaultDiagnosticLoggerMethod(level: Level) extends LoggerMethodBase(level) with DiagnosticLoggerMethod[FB] {
 
       import Implicits._
 
-      override def apply(message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = core.log(level, message)
+      private def sourceInfo(implicit line: Line, enc: Enclosing, args: Args): FieldBuilderResult = {
+        sourceInfoMethod(fieldBuilder, line, enc, args)
+      }
 
-      override def apply(message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = core.log(level, message, f1.asJava, fieldBuilder)
+      override def apply(message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = _ => sourceInfo
+        core.log(level, message, f.asJava, fieldBuilder)
+      }
+
+      override def apply(message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ sourceInfo
+        core.log(level, message, f.asJava, fieldBuilder)
+      }
 
       override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
-        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb)
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ sourceInfo
         core.log(level, message, f.asJava, fieldBuilder)
       }
 
       override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
-        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb)
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ sourceInfo
         core.log(level, message, f.asJava, fieldBuilder)
       }
 
@@ -213,17 +228,22 @@ object Logger {
                           f3: FB => FieldBuilderResult,
                           f4: FB => FieldBuilderResult
                         )(implicit line: Line, enc: Enclosing, args: Args): Unit = {
-        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb)
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb) ++ sourceInfo
         core.log(level, message, f.asJava, fieldBuilder)
       }
 
-      override def apply(condition: Condition, message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = core.log(level, condition.asJava, message)
+      override def apply(condition: Condition, message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = _ => sourceInfo
+        core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
+      }
 
-      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit =
-        core.log(level, condition.asJava, message, f1.asJava, fieldBuilder)
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ sourceInfo
+        core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
+      }
 
       override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
-        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb)
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ sourceInfo
         core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
       }
 
@@ -234,7 +254,7 @@ object Logger {
                           f2: FB => FieldBuilderResult,
                           f3: FB => FieldBuilderResult
                         )(implicit line: Line, enc: Enclosing, args: Args): Unit = {
-        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb)
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ sourceInfo
         core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
       }
 
@@ -246,7 +266,7 @@ object Logger {
                           f3: FB => FieldBuilderResult,
                           f4: FB => FieldBuilderResult
                         )(implicit line: Line, enc: Enclosing, args: Args): Unit = {
-        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb)
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb) ++ sourceInfo
         core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
       }
     }
@@ -332,33 +352,35 @@ object Logger {
         case Condition.never =>
           NoOp(core, fieldBuilder)
         case other =>
-          newLogger(newCoreLogger = core.withCondition(other.asJava))
+          newLogger(sourceInfoMethod, newCoreLogger = core.withCondition(other.asJava))
       }
     }
 
     override def withFields(f: FB => FieldBuilderResult): Logger[FB] = {
-      newLogger(newCoreLogger = core.withFields(f.asJava, fieldBuilder))
+      newLogger(sourceInfoMethod, newCoreLogger = core.withFields(f.asJava, fieldBuilder))
     }
 
     override def withThreadContext: Logger[FB] = {
       newLogger(
+        sourceInfoMethod,
         newCoreLogger = core.withThreadContext(Utilities.threadContext())
       )
     }
 
     override def withFieldBuilder[NEWFB](newFieldBuilder: NEWFB): Logger[NEWFB] = {
-      newLogger(newFieldBuilder = newFieldBuilder)
+      throw new UnsupportedOperationException("Cannot create new field builder with source info method!")
     }
 
     @inline
     private def newLogger[T](
+        sourceInfoMethod: (T, Line, Enclosing, Args) => FieldBuilderResult,
         newCoreLogger: CoreLogger = core,
         newFieldBuilder: T = fieldBuilder
-    ): Logger[T] = new Impl[T](newCoreLogger, newFieldBuilder)
+    ): Logger[T] = new Impl[T](newCoreLogger, newFieldBuilder, sourceInfoMethod)
   }
 
   trait NoOp[FB] extends Logger[FB] {
-    object NoOpMethod extends LoggerMethod[FB] {
+    object NoOpLoggerMethod extends LoggerMethod[FB] {
       override def enabled: Boolean = false
 
       override def enabled(condition: Condition): Boolean = false
@@ -483,11 +505,11 @@ object Logger {
 
       override def debug: DiagnosticLoggerMethod[FB] = NoOpDiagnosticMethod
 
-      override def info: LoggerMethod[FB] = NoOpMethod
+      override def info: LoggerMethod[FB] = NoOpLoggerMethod
 
-      override def warn: LoggerMethod[FB] = NoOpMethod
+      override def warn: LoggerMethod[FB] = NoOpLoggerMethod
 
-      override def error: LoggerMethod[FB] = NoOpMethod
+      override def error: LoggerMethod[FB] = NoOpLoggerMethod
     }
   }
 }
