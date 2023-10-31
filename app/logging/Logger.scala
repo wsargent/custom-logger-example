@@ -19,7 +19,9 @@ trait Logger[FB] extends LoggerSupport[FB, Logger] with DefaultMethodsSupport[FB
   def debug: DiagnosticLoggerMethod[FB]
 
   def info: LoggerMethod[FB]
+
   def warn: LoggerMethod[FB]
+
   def error: LoggerMethod[FB]
 }
 
@@ -30,9 +32,9 @@ trait EnabledLoggerMethod {
 
   /**
    * @param condition
-   *   the given condition.
+   * the given condition.
    * @return
-   *   true if the logger level is enabled and the condition is met.
+   * true if the logger level is enabled and the condition is met.
    */
   def enabled(condition: Condition): Boolean
 
@@ -44,7 +46,7 @@ trait LoggerMethod[FB] extends EnabledLoggerMethod {
    * Logs statement if enabled.
    *
    * @param message
-   *   the message.
+   * the message.
    */
   def apply(message: String): Unit
 
@@ -67,12 +69,12 @@ trait LoggerMethod[FB] extends EnabledLoggerMethod {
    * Logs statement if enabled using four field builder functions.
    */
   def apply(
-      message: String,
-      f1: FB => FieldBuilderResult,
-      f2: FB => FieldBuilderResult,
-      f3: FB => FieldBuilderResult,
-      f4: FB => FieldBuilderResult
-  ): Unit
+             message: String,
+             f1: FB => FieldBuilderResult,
+             f2: FB => FieldBuilderResult,
+             f3: FB => FieldBuilderResult,
+             f4: FB => FieldBuilderResult
+           ): Unit
 
   /**
    * Logs statement if enabled and condition is met.
@@ -98,13 +100,13 @@ trait LoggerMethod[FB] extends EnabledLoggerMethod {
    * Logs statement if enabled and condition is met with four field builder functions.
    */
   def apply(
-      condition: Condition,
-      message: String,
-      f1: FB => FieldBuilderResult,
-      f2: FB => FieldBuilderResult,
-      f3: FB => FieldBuilderResult,
-      f4: FB => FieldBuilderResult
-  ): Unit
+             condition: Condition,
+             message: String,
+             f1: FB => FieldBuilderResult,
+             f2: FB => FieldBuilderResult,
+             f3: FB => FieldBuilderResult,
+             f4: FB => FieldBuilderResult
+           ): Unit
 }
 
 
@@ -114,7 +116,7 @@ trait DiagnosticLoggerMethod[FB] extends EnabledLoggerMethod {
    * Logs statement if enabled.
    *
    * @param message
-   *   the message.
+   * the message.
    */
   def apply(message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit
 
@@ -137,12 +139,12 @@ trait DiagnosticLoggerMethod[FB] extends EnabledLoggerMethod {
    * Logs statement if enabled using four field builder functions.
    */
   def apply(
-      message: String,
-      f1: FB => FieldBuilderResult,
-      f2: FB => FieldBuilderResult,
-      f3: FB => FieldBuilderResult,
-      f4: FB => FieldBuilderResult
-  )(implicit line: Line, enc: Enclosing, args: Args): Unit
+             message: String,
+             f1: FB => FieldBuilderResult,
+             f2: FB => FieldBuilderResult,
+             f3: FB => FieldBuilderResult,
+             f4: FB => FieldBuilderResult
+           )(implicit line: Line, enc: Enclosing, args: Args): Unit
 
   /**
    * Logs statement if enabled and condition is met.
@@ -168,13 +170,13 @@ trait DiagnosticLoggerMethod[FB] extends EnabledLoggerMethod {
    * Logs statement if enabled and condition is met with four field builder functions.
    */
   def apply(
-      condition: Condition,
-      message: String,
-      f1: FB => FieldBuilderResult,
-      f2: FB => FieldBuilderResult,
-      f3: FB => FieldBuilderResult,
-      f4: FB => FieldBuilderResult
-  )(implicit line: Line, enc: Enclosing, args: Args): Unit
+             condition: Condition,
+             message: String,
+             f1: FB => FieldBuilderResult,
+             f2: FB => FieldBuilderResult,
+             f3: FB => FieldBuilderResult,
+             f4: FB => FieldBuilderResult
+           )(implicit line: Line, enc: Enclosing, args: Args): Unit
 }
 
 object Logger {
@@ -272,6 +274,7 @@ object Logger {
     }
 
     class DefaultLoggerMethod(level: Level) extends LoggerMethodBase(level) with LoggerMethod[FB] {
+
       import Implicits._
 
       override def apply(message: String): Unit = core.log(level, message)
@@ -289,12 +292,12 @@ object Logger {
       }
 
       override def apply(
-          message: String,
-          f1: FB => FieldBuilderResult,
-          f2: FB => FieldBuilderResult,
-          f3: FB => FieldBuilderResult,
-          f4: FB => FieldBuilderResult
-      ): Unit = {
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult,
+                          f4: FB => FieldBuilderResult
+                        ): Unit = {
         val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb)
         core.log(level, message, f.asJava, fieldBuilder)
       }
@@ -310,24 +313,24 @@ object Logger {
       }
 
       override def apply(
-          condition: Condition,
-          message: String,
-          f1: FB => FieldBuilderResult,
-          f2: FB => FieldBuilderResult,
-          f3: FB => FieldBuilderResult
-      ): Unit = {
+                          condition: Condition,
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult
+                        ): Unit = {
         val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb)
         core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
       }
 
       override def apply(
-          condition: Condition,
-          message: String,
-          f1: FB => FieldBuilderResult,
-          f2: FB => FieldBuilderResult,
-          f3: FB => FieldBuilderResult,
-          f4: FB => FieldBuilderResult
-      ): Unit = {
+                          condition: Condition,
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult,
+                          f4: FB => FieldBuilderResult
+                        ): Unit = {
         val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb)
         core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
       }
@@ -373,10 +376,10 @@ object Logger {
 
     @inline
     private def newLogger[T](
-        sourceInfoMethod: (T, Line, Enclosing, Args) => FieldBuilderResult,
-        newCoreLogger: CoreLogger = core,
-        newFieldBuilder: T = fieldBuilder
-    ): Logger[T] = new Impl[T](newCoreLogger, newFieldBuilder, sourceInfoMethod)
+                              sourceInfoMethod: (T, Line, Enclosing, Args) => FieldBuilderResult,
+                              newCoreLogger: CoreLogger = core,
+                              newFieldBuilder: T = fieldBuilder
+                            ): Logger[T] = new Impl[T](newCoreLogger, newFieldBuilder, sourceInfoMethod)
   }
 
   trait NoOp[FB] extends Logger[FB] {
@@ -398,31 +401,31 @@ object Logger {
       override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult): Unit = ()
 
       override def apply(
-          message: String,
-          f1: FB => FieldBuilderResult,
-          f2: FB => FieldBuilderResult,
-          f3: FB => FieldBuilderResult,
-          f4: FB => FieldBuilderResult
-      ): Unit = ()
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult,
+                          f4: FB => FieldBuilderResult
+                        ): Unit = ()
 
       override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult): Unit = ()
 
       override def apply(
-          condition: Condition,
-          message: String,
-          f1: FB => FieldBuilderResult,
-          f2: FB => FieldBuilderResult,
-          f3: FB => FieldBuilderResult
-      ): Unit = ()
+                          condition: Condition,
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult
+                        ): Unit = ()
 
       override def apply(
-          condition: Condition,
-          message: String,
-          f1: FB => FieldBuilderResult,
-          f2: FB => FieldBuilderResult,
-          f3: FB => FieldBuilderResult,
-          f4: FB => FieldBuilderResult
-      ): Unit = ()
+                          condition: Condition,
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult,
+                          f4: FB => FieldBuilderResult
+                        ): Unit = ()
     }
 
     object NoOpDiagnosticMethod extends DiagnosticLoggerMethod[FB] {

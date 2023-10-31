@@ -74,7 +74,40 @@ trait AppFieldBuilder extends PresentationFieldBuilder with OptionValueTypes {
 
 And the output when hitting `localhost:9000` looks like this:
 
+```json
+{
+  "@timestamp": "2023-10-31T12:28:14.763086188-07:00",
+  "@version": "1",
+  "message": "index: request={method=GET, path=/}",
+  "logger_name": "controllers.HomeController",
+  "thread_name": "application-akka.actor.default-dispatcher-6",
+  "level": "INFO",
+  "level_value": 20000,
+  "application.home": "/home/wsargent/work/custom-logger-example",
+  "request": {
+    "method": "GET",
+    "path": "/"
+  },
+  "candidateId": null
+}
 ```
-2023-10-29 14:42:54 INFO  controllers.HomeController  index: request={method=GET, path=/}
-2023-10-29 14:42:54 INFO  controllers.HomeController  index: result result={body={contentType=Some(text/html; charset=utf-8), contentLength=437}, responseHeader={status=200, reason=null}}
+
+When the DiagnosticLoggerMethod is used, additional source info is added to the JSON output:
+
+```json
+{
+  "@timestamp": "2023-10-31T12:28:14.761300355-07:00",
+  "@version": "1",
+  "message": "index now=2023-10-31T19:28:14.753995780Z",
+  "logger_name": "controllers.HomeController",
+  "thread_name": "application-akka.actor.default-dispatcher-6",
+  "level": "DEBUG",
+  "level_value": 10000,
+  "application.home": "/home/wsargent/work/custom-logger-example",
+  "now": "2023-10-31T19:28:14.753995780Z",
+  "sourceInfo": {
+    "line": 26,
+    "enclosing": "controllers.HomeController#index"
+  }
+}
 ```

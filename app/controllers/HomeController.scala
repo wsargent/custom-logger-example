@@ -4,6 +4,8 @@ import javax.inject._
 import play.api._
 import play.api.mvc._
 
+import java.time.Instant
+
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
@@ -20,7 +22,9 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
    * will be called when the application receives a `GET` request with
    * a path of `/`.
    */
-  def index() = Action { implicit request: Request[AnyContent] =>
+  def index(): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
+    logger.debug("index {}", _("now" -> Instant.now().toString))
+
     val candidateId = request.getQueryString("candidateId")
     logger.info("index: {}", _("request" -> request), _("candidateId" -> candidateId))
     val result = Ok(views.html.index())
