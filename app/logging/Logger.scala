@@ -8,16 +8,18 @@ import com.tersesystems.echopraxia.spi.{CoreLogger, Utilities}
 
 import scala.compat.java8.FunctionConverters.enrichAsJavaFunction
 
+import sourcecode._
+
 trait Logger[FB] extends LoggerSupport[FB, Logger] with DefaultMethodsSupport[FB] {
 
-  def trace: LoggerMethod[FB]
-  def debug: LoggerMethod[FB]
+  def trace: DiagnosticLoggerMethod[FB]
+  def debug: DiagnosticLoggerMethod[FB]
   def info: LoggerMethod[FB]
   def warn: LoggerMethod[FB]
   def error: LoggerMethod[FB]
 }
 
-trait LoggerMethod[FB] {
+trait EnabledLoggerMethod {
 
   /** @return true if the logger enabled at this level. */
   def enabled: Boolean
@@ -29,6 +31,10 @@ trait LoggerMethod[FB] {
    *   true if the logger level is enabled and the condition is met.
    */
   def enabled(condition: Condition): Boolean
+
+}
+
+trait LoggerMethod[FB] extends EnabledLoggerMethod {
 
   /**
    * Logs statement if enabled.
@@ -97,6 +103,76 @@ trait LoggerMethod[FB] {
   ): Unit
 }
 
+
+trait DiagnosticLoggerMethod[FB] extends EnabledLoggerMethod {
+
+  /**
+   * Logs statement if enabled.
+   *
+   * @param message
+   *   the message.
+   */
+  def apply(message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled using a field builder function.
+   */
+  def apply(message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled using two field builder functions.
+   */
+  def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled using three field builder functions.
+   */
+  def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled using four field builder functions.
+   */
+  def apply(
+      message: String,
+      f1: FB => FieldBuilderResult,
+      f2: FB => FieldBuilderResult,
+      f3: FB => FieldBuilderResult,
+      f4: FB => FieldBuilderResult
+  )(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled and condition is met.
+   */
+  def apply(condition: Condition, message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled and condition is met with a field builder function.
+   */
+  def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled and condition is met with two field builder functions.
+   */
+  def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled and condition is met with three field builder functions.
+   */
+  def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit
+
+  /**
+   * Logs statement if enabled and condition is met with four field builder functions.
+   */
+  def apply(
+      condition: Condition,
+      message: String,
+      f1: FB => FieldBuilderResult,
+      f2: FB => FieldBuilderResult,
+      f3: FB => FieldBuilderResult,
+      f4: FB => FieldBuilderResult
+  )(implicit line: Line, enc: Enclosing, args: Args): Unit
+}
+
 object Logger {
 
   def apply[FB](core: CoreLogger, fieldBuilder: FB): Logger[FB] = new Impl[FB](core, fieldBuilder)
@@ -104,12 +180,79 @@ object Logger {
   /**
    */
   class Impl[FB](val core: CoreLogger, val fieldBuilder: FB) extends Logger[FB] {
-    class DefaultLoggerMethod(level: Level) extends LoggerMethod[FB] {
-      import Implicits._
 
+    abstract class LoggerMethodBase(level: Level) extends EnabledLoggerMethod {
       override def enabled: Boolean = core.isEnabled(level)
 
       override def enabled(condition: Condition): Boolean = core.isEnabled(level, condition.asJava)
+
+    }
+
+    class DefaultDiagnosticLoggerMethod(level: Level) extends LoggerMethodBase(level) with DiagnosticLoggerMethod[FB] {
+
+      import Implicits._
+
+      override def apply(message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = core.log(level, message)
+
+      override def apply(message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = core.log(level, message, f1.asJava, fieldBuilder)
+
+      override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb)
+        core.log(level, message, f.asJava, fieldBuilder)
+      }
+
+      override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb)
+        core.log(level, message, f.asJava, fieldBuilder)
+      }
+
+      override def apply(
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult,
+                          f4: FB => FieldBuilderResult
+                        )(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb)
+        core.log(level, message, f.asJava, fieldBuilder)
+      }
+
+      override def apply(condition: Condition, message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = core.log(level, condition.asJava, message)
+
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit =
+        core.log(level, condition.asJava, message, f1.asJava, fieldBuilder)
+
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb)
+        core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
+      }
+
+      override def apply(
+                          condition: Condition,
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult
+                        )(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb)
+        core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
+      }
+
+      override def apply(
+                          condition: Condition,
+                          message: String,
+                          f1: FB => FieldBuilderResult,
+                          f2: FB => FieldBuilderResult,
+                          f3: FB => FieldBuilderResult,
+                          f4: FB => FieldBuilderResult
+                        )(implicit line: Line, enc: Enclosing, args: Args): Unit = {
+        val f: FB => FieldBuilderResult = fb => f1(fb) ++ f2(fb) ++ f3(fb) ++ f4(fb)
+        core.log(level, condition.asJava, message, f.asJava, fieldBuilder)
+      }
+    }
+
+    class DefaultLoggerMethod(level: Level) extends LoggerMethodBase(level) with LoggerMethod[FB] {
+      import Implicits._
 
       override def apply(message: String): Unit = core.log(level, message)
 
@@ -170,9 +313,9 @@ object Logger {
       }
     }
 
-    override val trace: DefaultLoggerMethod = new DefaultLoggerMethod(TRACE)
+    override val trace: DefaultDiagnosticLoggerMethod = new DefaultDiagnosticLoggerMethod(TRACE)
 
-    override val debug: DefaultLoggerMethod = new DefaultLoggerMethod(DEBUG)
+    override val debug: DefaultDiagnosticLoggerMethod = new DefaultDiagnosticLoggerMethod(DEBUG)
 
     override val info: DefaultLoggerMethod = new DefaultLoggerMethod(INFO)
 
@@ -259,6 +402,65 @@ object Logger {
           f4: FB => FieldBuilderResult
       ): Unit = ()
     }
+
+    object NoOpDiagnosticMethod extends DiagnosticLoggerMethod[FB] {
+      override def enabled: Boolean = false
+
+      override def enabled(condition: Condition): Boolean = false
+
+      /**
+       * Logs statement if enabled.
+       *
+       * @param message
+       * the message.
+       */
+      override def apply(message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled using a field builder function.
+       */
+      override def apply(message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled using two field builder functions.
+       */
+      override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled using three field builder functions.
+       */
+      override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled using four field builder functions.
+       */
+      override def apply(message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult, f4: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled and condition is met.
+       */
+      override def apply(condition: Condition, message: String)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled and condition is met with a field builder function.
+       */
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled and condition is met with two field builder functions.
+       */
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled and condition is met with three field builder functions.
+       */
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+
+      /**
+       * Logs statement if enabled and condition is met with four field builder functions.
+       */
+      override def apply(condition: Condition, message: String, f1: FB => FieldBuilderResult, f2: FB => FieldBuilderResult, f3: FB => FieldBuilderResult, f4: FB => FieldBuilderResult)(implicit line: Line, enc: Enclosing, args: Args): Unit = ()
+    }
   }
 
   object NoOp {
@@ -277,9 +479,9 @@ object Logger {
 
       override def withFieldBuilder[T <: FB](newBuilder: T): Logger[T] = NoOp(core, newBuilder)
 
-      override def trace: LoggerMethod[FB] = NoOpMethod
+      override def trace: DiagnosticLoggerMethod[FB] = NoOpDiagnosticMethod
 
-      override def debug: LoggerMethod[FB] = NoOpMethod
+      override def debug: DiagnosticLoggerMethod[FB] = NoOpDiagnosticMethod
 
       override def info: LoggerMethod[FB] = NoOpMethod
 

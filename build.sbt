@@ -20,7 +20,10 @@ libraryDependencies += "com.tersesystems.echopraxia" % "logstash" % echopraxiaVe
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.4.8"
 libraryDependencies += "net.logstash.logback" % "logstash-logback-encoder" % "7.4"
 
+libraryDependencies += "com.lihaoyi" %% "sourcecode" % "0.3.1"
+
 // Jackson version doesn't work out of the box
 libraryDependencies += "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.15.3"
 
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.15" % Test
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.15" % Test
